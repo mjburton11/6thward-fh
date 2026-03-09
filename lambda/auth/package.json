@@ -1,0 +1,21 @@
+{
+  "name": "pdf-auth-lambda",
+  "version": "1.0.0",
+  "description": "Authentication Lambda for PDF Directory",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "npm run build && cd dist && cp ../package.json . && npm install --production && zip -r ../function.zip . && cd .."
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/aws-lambda": "^8.10.133",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.3.3"
+  }
+}

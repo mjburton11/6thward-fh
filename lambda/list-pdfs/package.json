@@ -1,0 +1,20 @@
+{
+  "name": "pdf-list-lambda",
+  "version": "1.0.0",
+  "description": "List PDFs Lambda for PDF Directory",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "npm run build && cd dist && cp ../package.json . && npm install --production && zip -r ../function.zip . && cd .."
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "@aws-sdk/client-s3": "^3.490.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/aws-lambda": "^8.10.133",
+    "@types/jsonwebtoken": "^9.0.5",
+    "typescript": "^5.3.3"
+  }
+}

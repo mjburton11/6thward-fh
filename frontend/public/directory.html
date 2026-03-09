@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Directory</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>📁 PDF Directory</h1>
+      <button onclick="localStorage.removeItem('jwt'); window.location.href='/';" class="btn-logout">
+        Logout
+      </button>
+    </header>
+
+    <div class="main-content">
+      <!-- Upload Section -->
+      <section class="upload-section card">
+        <h2>Upload PDF</h2>
+        <form hx-post="/api/upload" 
+              hx-encoding="multipart/form-data"
+              hx-target="#pdf-list" 
+              hx-swap="afterbegin"
+              hx-indicator="#upload-loading"
+              class="upload-form">
+          <div class="file-input-wrapper">
+            <input type="file" 
+                   name="pdf" 
+                   accept=".pdf,application/pdf" 
+                   required
+                   id="pdf-file"
+                   class="file-input">
+            <label for="pdf-file" class="file-label">
+              <span class="file-icon">📄</span>
+              <span class="file-text">Choose PDF file</span>
+            </label>
+          </div>
+          
+          <button type="submit" class="btn-primary">
+            <span>Upload</span>
+            <span id="upload-loading" class="htmx-indicator">Uploading...</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- PDF List Section -->
+      <section class="pdf-list-section card">
+        <h2>Available PDFs</h2>
+        <div id="pdf-list" 
+             hx-get="/api/pdfs" 
+             hx-trigger="load"
+             hx-indicator="#list-loading"
+             class="pdf-list">
+          <div id="list-loading" class="loading">
+            <span class="spinner"></span>
+            <span>Loading PDFs...</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  
+  <script type="module" src="/dist/auth.js"></script>
+  <script>
+    // Update file input label when file is selected
+    document.getElementById('pdf-file')?.addEventListener('change', function(e) {
+      const target = e.target as HTMLInputElement;
+      const label = document.querySelector('.file-text');
+      if (target.files && target.files.length > 0 && label) {
+        label.textContent = target.files[0].name;
+      }
+    });
+  </script>
+</body>
+</html>
