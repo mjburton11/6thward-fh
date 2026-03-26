@@ -1,0 +1,19 @@
+{
+  "name": "pdf-delete-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function for deleting PDFs",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && mv dist/delete/* dist/ && mv dist/shared dist/shared-tmp && rm -rf dist/delete && mv dist/shared-tmp dist/shared && sed -i '' 's|../shared/|./shared/|g' dist/index.js && cp -r node_modules dist/"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.490.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.131",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3"
+  }
+}

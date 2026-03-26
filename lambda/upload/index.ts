@@ -1,13 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import * as busboy from 'busboy';
+import busboy from 'busboy';
 import { v4 as uuidv4 } from 'uuid';
 import { verifyToken, extractToken, getCorsHeaders } from '../shared/auth';
 
-const PDF_BUCKET_NAME = process.env.PDF_BUCKET_NAME || '';
-const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN || '';
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '*';
+const PDF_BUCKET_NAME = process.env.PDF_BUCKET_NAME || '6thward-fh-pdfs';
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || 'https://6thward-fh.theburtonforge.com';
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
@@ -29,11 +28,11 @@ function parseMultipartForm(event: APIGatewayProxyEvent): Promise<FileUpload> {
     let fileUpload: FileUpload | null = null;
     const chunks: Buffer[] = [];
 
-    bb.on('file', (name, file, info) => {
+    bb.on('file', (name: string, file: NodeJS.ReadableStream, info: busboy.FileInfo) => {
       const { filename, mimeType } = info;
       console.log(`File detected: ${filename}, type: ${mimeType}`);
 
-      file.on('data', (data) => {
+      file.on('data', (data: Buffer) => {
         chunks.push(data);
       });
 
@@ -54,14 +53,15 @@ function parseMultipartForm(event: APIGatewayProxyEvent): Promise<FileUpload> {
       }
     });
 
-    bb.on('error', (error) => {
+    bb.on('error', (error: Error) => {
       reject(error);
     });
 
     // Write the body to busboy
+    // API Gateway sends binary data as base64-encoded
     const body = event.isBase64Encoded 
       ? Buffer.from(event.body || '', 'base64')
-      : Buffer.from(event.body || '', 'utf-8');
+      : Buffer.from(event.body || '', 'binary');
     
     bb.write(body);
     bb.end();
@@ -73,6 +73,7 @@ function parseMultipartForm(event: APIGatewayProxyEvent): Promise<FileUpload> {
  */
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   console.log('Upload request received');
+  console.log('Headers:', JSON.stringify(event.headers, null, 2));
 
   const corsHeaders = getCorsHeaders(ALLOWED_ORIGINS);
 
@@ -102,8 +103,8 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const authHeader = event.headers.Authorization || event.headers.authorization;
     const token = extractToken(authHeader);
 
-    if (!token || !verifyToken(token)) {
-      console.log('Invalid or missing token');
+    if (!token) {
+      console.log('No token provided');
       return {
         statusCode: 401,
         headers: {
@@ -114,16 +115,17 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // Validate bucket configuration
-    if (!PDF_BUCKET_NAME) {
-      console.error('PDF_BUCKET_NAME environment variable not set');
+    const payload = await verifyToken(token);
+    
+    if (!payload) {
+      console.log('Invalid token');
       return {
-        statusCode: 500,
+        statusCode: 401,
         headers: {
           ...corsHeaders,
           'Content-Type': 'text/html',
         },
-        body: '<div class="error">Server configuration error</div>',
+        body: '<div class="error">Unauthorized</div>',
       };
     }
 
@@ -160,15 +162,13 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     await s3Client.send(uploadCommand);
     console.log(`File uploaded successfully: ${uniqueFilename}`);
 
-    // Generate public URL
-    const publicUrl = CLOUDFRONT_DOMAIN 
-      ? `https://${CLOUDFRONT_DOMAIN}/${uniqueFilename}`
-      : `https://${PDF_BUCKET_NAME}.s3.amazonaws.com/${uniqueFilename}`;
+    // Generate public URL - PDFs are served from S3 directly (public bucket)
+    const publicUrl = `https://${PDF_BUCKET_NAME}.s3.amazonaws.com/${uniqueFilename}`;
 
     // Return HTML fragment for htmx to insert
     const htmlFragment = `
       <div class="pdf-item" id="pdf-${uniqueFilename}">
-        <a href="/${uniqueFilename}" target="_blank" class="pdf-link">
+        <a href="${publicUrl}" target="_blank" class="pdf-link">
           <span class="pdf-icon">📄</span>
           <span class="pdf-name">${sanitizedFilename}</span>
         </a>

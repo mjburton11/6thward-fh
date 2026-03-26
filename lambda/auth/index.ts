@@ -1,9 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as bcrypt from 'bcryptjs';
 import { generateToken, getCorsHeaders } from '../shared/auth';
+import { getSecrets } from '../shared/secrets';
 
-const PASSWORD_HASH = process.env.PASSWORD_HASH || '';
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '*';
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || 'https://6thward-fh.theburtonforge.com';
 
 /**
  * Parse form-urlencoded body
@@ -74,21 +74,11 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // Validate password hash is configured
-    if (!PASSWORD_HASH) {
-      console.error('PASSWORD_HASH environment variable not set');
-      return {
-        statusCode: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'text/html',
-        },
-        body: '<div class="error">Server configuration error</div>',
-      };
-    }
+    // Retrieve secrets from Secrets Manager
+    const secrets = await getSecrets();
 
     // Verify password
-    const isValid = await bcrypt.compare(password, PASSWORD_HASH);
+    const isValid = await bcrypt.compare(password, secrets.passwordHash);
 
     if (!isValid) {
       console.log('Invalid password attempt');
@@ -103,7 +93,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // Generate JWT token
-    const token = generateToken();
+    const token = await generateToken();
     console.log('Authentication successful, token generated');
 
     // Return success with token in custom header

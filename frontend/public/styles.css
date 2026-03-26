@@ -321,6 +321,120 @@ body {
   flex-shrink: 0;
 }
 
+.delete-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.delete-btn:hover {
+  opacity: 1;
+  background: #fee2e2;
+  transform: scale(1.1);
+}
+
+.delete-btn:active {
+  transform: scale(0.95);
+}
+
+.qr-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.qr-btn:hover {
+  opacity: 1;
+  background: #dbeafe;
+  transform: scale(1.1);
+}
+
+.qr-btn:active {
+  transform: scale(0.95);
+}
+
+.qr-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.qr-modal-content {
+  background: var(--card-bg);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  position: relative;
+  max-width: 400px;
+}
+
+.qr-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+}
+
+.qr-modal-close:hover {
+  color: var(--text-primary);
+}
+
+#qr-modal-title {
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  word-break: break-word;
+}
+
+#qr-code-container {
+  margin: 1.5rem auto;
+  display: flex;
+  justify-content: center;
+}
+
+#qr-code-container > div {
+  display: inline-block;
+}
+
+#qr-code-container canvas,
+#qr-code-container img {
+  border: 4px solid var(--bg-color);
+  border-radius: 8px;
+  display: block;
+}
+
+.qr-modal-hint {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem 2rem;

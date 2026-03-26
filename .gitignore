@@ -6,6 +6,9 @@ package-lock.json
 dist/
 *.zip
 
+# Lambda shared symlink
+lambda/shared/node_modules
+
 # Environment
 .env
 

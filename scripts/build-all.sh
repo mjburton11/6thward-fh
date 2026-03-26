@@ -14,6 +14,15 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Create symlink for shared node_modules (points to auth's node_modules)
+# This is needed for TypeScript compilation of shared files
+if [ ! -L "lambda/shared/node_modules" ]; then
+  echo "Creating node_modules symlink for shared folder..."
+  cd lambda/shared
+  ln -sf ../auth/node_modules node_modules
+  cd ../..
+fi
+
 # Build frontend
 echo -e "${BLUE}Building frontend...${NC}"
 cd frontend
@@ -48,6 +57,14 @@ npm install
 npm run build
 cd ../..
 echo -e "${GREEN}✓ List PDFs Lambda built${NC}"
+
+# Build delete Lambda
+echo "Building delete Lambda..."
+cd lambda/delete
+npm install
+npm run build
+cd ../..
+echo -e "${GREEN}✓ Delete Lambda built${NC}"
 
 echo ""
 echo -e "${GREEN}=========================================${NC}"

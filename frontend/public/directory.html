@@ -6,6 +6,7 @@
   <title>PDF Directory</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="/qrcode.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -20,17 +21,17 @@
       <!-- Upload Section -->
       <section class="upload-section card">
         <h2>Upload PDF</h2>
-        <form hx-post="/api/upload" 
+        <form hx-post="https://6thward-fh-api.theburtonforge.com/api/upload" 
               hx-encoding="multipart/form-data"
               hx-target="#pdf-list" 
               hx-swap="afterbegin"
               hx-indicator="#upload-loading"
-              class="upload-form">
+              class="upload-form"
+              id="upload-form">
           <div class="file-input-wrapper">
             <input type="file" 
                    name="pdf" 
                    accept=".pdf,application/pdf" 
-                   required
                    id="pdf-file"
                    class="file-input">
             <label for="pdf-file" class="file-label">
@@ -43,6 +44,7 @@
             <span>Upload</span>
             <span id="upload-loading" class="htmx-indicator">Uploading...</span>
           </button>
+          <div id="upload-error" class="error" style="display: none; margin-top: 0.5rem;"></div>
         </form>
       </section>
 
@@ -50,7 +52,7 @@
       <section class="pdf-list-section card">
         <h2>Available PDFs</h2>
         <div id="pdf-list" 
-             hx-get="/api/pdfs" 
+             hx-get="https://6thward-fh-api.theburtonforge.com/api/pdfs" 
              hx-trigger="load"
              hx-indicator="#list-loading"
              class="pdf-list">
@@ -66,13 +68,116 @@
   <script type="module" src="/dist/auth.js"></script>
   <script>
     // Update file input label when file is selected
-    document.getElementById('pdf-file')?.addEventListener('change', function(e) {
-      const target = e.target as HTMLInputElement;
-      const label = document.querySelector('.file-text');
-      if (target.files && target.files.length > 0 && label) {
-        label.textContent = target.files[0].name;
+    document.addEventListener('DOMContentLoaded', function() {
+      const fileInput = document.getElementById('pdf-file');
+      const uploadForm = document.getElementById('upload-form');
+      const uploadError = document.getElementById('upload-error');
+      
+      if (fileInput) {
+        // Update label text when file is selected
+        fileInput.addEventListener('change', function(e) {
+          const label = document.querySelector('.file-text');
+          if (e.target.files && e.target.files.length > 0 && label) {
+            label.textContent = e.target.files[0].name;
+            // Hide error message when file is selected
+            if (uploadError) {
+              uploadError.style.display = 'none';
+            }
+          }
+        });
       }
+      
+      if (uploadForm) {
+        // Validate form before submission
+        uploadForm.addEventListener('htmx:configRequest', function(evt) {
+          if (!fileInput.files || fileInput.files.length === 0) {
+            evt.preventDefault();
+            if (uploadError) {
+              uploadError.textContent = 'Please select a PDF file to upload';
+              uploadError.style.display = 'block';
+            }
+            return false;
+          }
+          
+          // Validate file type
+          const file = fileInput.files[0];
+          if (file && !file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+            evt.preventDefault();
+            if (uploadError) {
+              uploadError.textContent = 'Please select a valid PDF file';
+              uploadError.style.display = 'block';
+            }
+            return false;
+          }
+          
+          // Hide error if validation passes
+          if (uploadError) {
+            uploadError.style.display = 'none';
+          }
+        });
+        
+        // Clear file input and reset label after successful upload
+        uploadForm.addEventListener('htmx:afterRequest', function(evt) {
+          if (evt.detail.xhr.status === 200) {
+            fileInput.value = '';
+            const label = document.querySelector('.file-text');
+            if (label) {
+              label.textContent = 'Choose PDF file';
+            }
+          }
+        });
+      }
+      
+      // QR Code modal functions
+      window.showQRCode = function(url, filename) {
+        // Check if QRCode library is loaded
+        if (typeof QRCode === 'undefined') {
+          console.error('QRCode library not loaded');
+          alert('QR code library is loading, please try again in a moment');
+          return;
+        }
+        
+        const modal = document.getElementById('qr-modal');
+        const container = document.getElementById('qr-code-container');
+        const title = document.getElementById('qr-modal-title');
+        
+        title.textContent = filename;
+        container.innerHTML = '';
+        
+        // Create a div for QRCode.js library (it creates canvas internally)
+        const qrDiv = document.createElement('div');
+        container.appendChild(qrDiv);
+        
+        try {
+          new QRCode(qrDiv, {
+            text: url,
+            width: 300,
+            height: 300,
+            colorDark: '#111827',
+            colorLight: '#FFFFFF',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+          modal.style.display = 'flex';
+        } catch (error) {
+          console.error('QR code generation error:', error);
+          container.innerHTML = '<p class="error">Failed to generate QR code</p>';
+        }
+      };
+
+      window.closeQRModal = function() {
+        document.getElementById('qr-modal').style.display = 'none';
+      };
     });
   </script>
+  
+  <!-- QR Code Modal -->
+  <div id="qr-modal" class="qr-modal" onclick="closeQRModal()">
+    <div class="qr-modal-content" onclick="event.stopPropagation()">
+      <button class="qr-modal-close" onclick="closeQRModal()">&times;</button>
+      <h3 id="qr-modal-title"></h3>
+      <div id="qr-code-container"></div>
+      <p class="qr-modal-hint">Scan with your phone to open the PDF</p>
+    </div>
+  </div>
 </body>
 </html>

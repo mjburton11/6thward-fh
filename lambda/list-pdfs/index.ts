@@ -3,9 +3,8 @@ import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { verifyToken, extractToken, getCorsHeaders } from '../shared/auth';
 import { PDFMetadata } from '../shared/types';
 
-const PDF_BUCKET_NAME = process.env.PDF_BUCKET_NAME || '';
-const CLOUDFRONT_DOMAIN = process.env.CLOUDFRONT_DOMAIN || '';
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '*';
+const PDF_BUCKET_NAME = process.env.PDF_BUCKET_NAME || '6thward-fh-pdfs';
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || 'https://6thward-fh.theburtonforge.com';
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
@@ -70,8 +69,8 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const authHeader = event.headers.Authorization || event.headers.authorization;
     const token = extractToken(authHeader);
 
-    if (!token || !verifyToken(token)) {
-      console.log('Invalid or missing token');
+    if (!token) {
+      console.log('No token provided');
       return {
         statusCode: 401,
         headers: {
@@ -82,16 +81,17 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    // Validate bucket configuration
-    if (!PDF_BUCKET_NAME) {
-      console.error('PDF_BUCKET_NAME environment variable not set');
+    const payload = await verifyToken(token);
+    
+    if (!payload) {
+      console.log('Invalid token');
       return {
-        statusCode: 500,
+        statusCode: 401,
         headers: {
           ...corsHeaders,
           'Content-Type': 'text/html',
         },
-        body: '<div class="error">Server configuration error</div>',
+        body: '<div class="error">Unauthorized</div>',
       };
     }
 
@@ -110,9 +110,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         filename: obj.Key!,
         size: obj.Size || 0,
         lastModified: obj.LastModified || new Date(),
-        url: CLOUDFRONT_DOMAIN 
-          ? `https://${CLOUDFRONT_DOMAIN}/${obj.Key}`
-          : `https://${PDF_BUCKET_NAME}.s3.amazonaws.com/${obj.Key}`,
+        url: `https://${PDF_BUCKET_NAME}.s3.amazonaws.com/${obj.Key}`,
       }))
       .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime()); // Sort by newest first
 
@@ -128,16 +126,38 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       };
     }
 
-    const htmlFragments = pdfs.map(pdf => `
-      <div class="pdf-item">
-        <a href="/${pdf.filename}" target="_blank" class="pdf-link">
+    const htmlFragments = pdfs.map(pdf => {
+      const encodedFilename = encodeURIComponent(pdf.filename);
+      const escapedFilename = pdf.filename.replace(/"/g, '&quot;');
+      const escapedUrl = pdf.url.replace(/'/g, "\\'");
+      const itemId = `pdf-${pdf.filename.replace(/[^a-zA-Z0-9-]/g, '_')}`;
+      
+      return `
+      <div class="pdf-item" id="${itemId}">
+        <a href="${pdf.url}" target="_blank" class="pdf-link">
           <span class="pdf-icon">📄</span>
           <span class="pdf-name">${pdf.filename}</span>
         </a>
         <span class="pdf-size">${formatFileSize(pdf.size)}</span>
         <span class="pdf-date">${formatDate(pdf.lastModified)}</span>
+        <button 
+          class="qr-btn"
+          onclick="showQRCode('${escapedUrl}', '${escapedFilename}')"
+          title="Show QR Code">
+          📱
+        </button>
+        <button 
+          class="delete-btn"
+          hx-delete="https://6thward-fh-api.theburtonforge.com/api/pdfs/${encodedFilename}"
+          hx-target="#${itemId}"
+          hx-swap="outerHTML"
+          hx-confirm="Are you sure you want to delete ${escapedFilename}?"
+          title="Delete PDF">
+          🗑️
+        </button>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     return {
       statusCode: 200,

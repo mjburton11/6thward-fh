@@ -1,6 +1,5 @@
 import * as jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-this';
+import { getSecrets } from './secrets';
 
 export interface JWTPayload {
   authorized: boolean;
@@ -11,12 +10,13 @@ export interface JWTPayload {
 /**
  * Generate a JWT token
  */
-export function generateToken(): string {
+export async function generateToken(): Promise<string> {
+  const secrets = await getSecrets();
   const payload: JWTPayload = {
     authorized: true,
   };
 
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, secrets.jwtSecret, {
     expiresIn: '24h',
   });
 }
@@ -24,9 +24,10 @@ export function generateToken(): string {
 /**
  * Verify and decode JWT token
  */
-export function verifyToken(token: string): JWTPayload | null {
+export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const secrets = await getSecrets();
+    const decoded = jwt.verify(token, secrets.jwtSecret) as JWTPayload;
     return decoded;
   } catch (error) {
     console.error('JWT verification failed:', error);
@@ -56,7 +57,7 @@ export function extractToken(authHeader: string | undefined): string | null {
 export function getCorsHeaders(allowedOrigin: string = '*'): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Auth-Token',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Auth-Token,HX-Request,HX-Trigger,HX-Target,HX-Current-URL,HX-Boosted,HX-Prompt',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Expose-Headers': 'X-Auth-Token',
   };

@@ -4,12 +4,13 @@
   "description": "PDF Upload Lambda for PDF Directory",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && mv dist/upload/* dist/ && mv dist/shared dist/shared-tmp && rm -rf dist/upload && mv dist/shared-tmp dist/shared && sed -i '' 's|../shared/|./shared/|g' dist/index.js",
     "package": "npm run build && cd dist && cp ../package.json . && npm install --production && zip -r ../function.zip . && cd .."
   },
   "dependencies": {
     "jsonwebtoken": "^9.0.2",
     "@aws-sdk/client-s3": "^3.490.0",
+    "@aws-sdk/client-secrets-manager": "^3.490.0",
     "busboy": "^1.6.0",
     "uuid": "^9.0.1"
   },
